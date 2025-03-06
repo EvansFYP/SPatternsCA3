@@ -77,7 +77,7 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 	// holds automatically generated file name
 	String generatedFileName;
 	// holds current Employee object
-	Employee currentEmployee;
+	Employee currentEmployee = new NullEmployee();
 	JTextField searchByIdField, searchBySurnameField;
 	// gender combo box values
 	String[] gender = { "", "M", "F" };
@@ -294,144 +294,130 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 
 	// display current Employee details
 	public void displayRecords(Employee thisEmployee) {
-		int countGender = 0;
-		int countDep = 0;
-		boolean found = false;
+		
+		//no longer checking for null employee
+		
+	    // Clear search fields
+	    searchByIdField.setText("");
+	    searchBySurnameField.setText("");
 
-		searchByIdField.setText("");
-		searchBySurnameField.setText("");
-		// if Employee is null or ID is 0 do nothing else display Employee
-		// details
-		if (thisEmployee == null) {
-		} else if (thisEmployee.getEmployeeId() == 0) {
-		} else {
-			// find corresponding gender combo box value to current employee
-			while (!found && countGender < gender.length - 1) {
-				if (Character.toString(thisEmployee.getGender()).equalsIgnoreCase(gender[countGender]))
-					found = true;
-				else
-					countGender++;
-			} // end while
-			found = false;
-			// find corresponding department combo box value to current employee
-			while (!found && countDep < department.length - 1) {
-				if (thisEmployee.getDepartment().trim().equalsIgnoreCase(department[countDep]))
-					found = true;
-				else
-					countDep++;
-			} // end while
-			idField.setText(Integer.toString(thisEmployee.getEmployeeId()));
-			ppsField.setText(thisEmployee.getPps().trim());
-			surnameField.setText(thisEmployee.getSurname().trim());
-			firstNameField.setText(thisEmployee.getFirstName());
-			genderCombo.setSelectedIndex(countGender);
-			departmentCombo.setSelectedIndex(countDep);
-			salaryField.setText(format.format(thisEmployee.getSalary()));
-			// set corresponding full time combo box value to current employee
-			if (thisEmployee.getFullTime() == true)
-				fullTimeCombo.setSelectedIndex(1);
-			else
-				fullTimeCombo.setSelectedIndex(2);
-		}
-		change = false;
-	}// end display records
+	    // Update fields with employee data
+	    idField.setText(Integer.toString(thisEmployee.getEmployeeId()));
+	    ppsField.setText(thisEmployee.getPps().trim());
+	    surnameField.setText(thisEmployee.getSurname().trim());
+	    firstNameField.setText(thisEmployee.getFirstName());
+	    genderCombo.setSelectedIndex(findIndexInArray(gender, Character.toString(thisEmployee.getGender())));
+	    departmentCombo.setSelectedIndex(findIndexInArray(department, thisEmployee.getDepartment().trim()));
+	    salaryField.setText(format.format(thisEmployee.getSalary()));
+	    fullTimeCombo.setSelectedIndex(thisEmployee.getFullTime() ? 1 : 2);
 
+	    change = false;
+	}
+
+	private int findIndexInArray(String[] array, String value) {
+	    boolean found = false;
+	    int index = 0;
+	    while (!found && index < array.length - 1) {
+	        if (value.equalsIgnoreCase(array[index])) {
+	            found = true;
+	        } else {
+	            index++;
+	        }
+	    }
+
+	    return found ? index : -1; // Return -1 if the value is not found
+	}
+	
 	// display Employee summary dialog
 	private void displayEmployeeSummaryDialog() {
 		// display Employee summary dialog if these is someone to display
 		if (isSomeoneToDisplay())
 			new EmployeeSummaryDialog(getAllEmloyees());
-	}// end displaySummaryDialog
+	}
 
 	// display search by ID dialog
 	private void displaySearchByIdDialog() {
 		if (isSomeoneToDisplay())
 			new SearchByIdDialog(EmployeeDetails.this);
-	}// end displaySearchByIdDialog
+	}
 
 	// display search by surname dialog
 	private void displaySearchBySurnameDialog() {
 		if (isSomeoneToDisplay())
 			new SearchBySurnameDialog(EmployeeDetails.this);
-	}// end displaySearchBySurnameDialog
+	}
 
-	// find byte start in file for first active record
 	private void firstRecord() {
-		// if any active record in file look for first record
-		if (isSomeoneToDisplay()) {
-			// open file for reading
-			application.openReadFile(file.getAbsolutePath());
-			// get byte start in file for first record
-			currentByteStart = application.getFirst();
-			// assign current Employee to first record in file
-			currentEmployee = application.readRecords(currentByteStart);
-			application.closeReadFile();// close file for reading
-			// if first record is inactive look for next record
-			if (currentEmployee.getEmployeeId() == 0)
-				nextRecord();// look for next record
-		} // end if
-	}// end firstRecord
+	    if (isSomeoneToDisplay()) {
+	        currentEmployee = readRecord(application.getFirst());
+	    } else {
+	        currentEmployee = new NullEmployee(); // No records exist
+	    }
+	    displayRecords(currentEmployee);
+	}
 
-	// find byte start in file for previous active record
 	private void previousRecord() {
-		// if any active record in file look for first record
-		if (isSomeoneToDisplay()) {
-			// open file for reading
-			application.openReadFile(file.getAbsolutePath());
-			// get byte start in file for previous record
-			currentByteStart = application.getPrevious(currentByteStart);
-			// assign current Employee to previous record in file
-			currentEmployee = application.readRecords(currentByteStart);
-			// loop to previous record until Employee is active - ID is not 0
-			while (currentEmployee.getEmployeeId() == 0) {
-				// get byte start in file for previous record
-				currentByteStart = application.getPrevious(currentByteStart);
-				// assign current Employee to previous record in file
-				currentEmployee = application.readRecords(currentByteStart);
-			} // end while
-			application.closeReadFile();// close file for reading
-		}
-	}// end previousRecord
-
-	// find byte start in file for next active record
+	    if (isSomeoneToDisplay()) {
+	        currentEmployee = readPreviousOrNextRecord(true);
+	    } else {
+	        currentEmployee = new NullEmployee(); // No records exist
+	    }
+	    displayRecords(currentEmployee);
+	}
 	private void nextRecord() {
-		// if any active record in file look for first record
-		if (isSomeoneToDisplay()) {
-			// open file for reading
-			application.openReadFile(file.getAbsolutePath());
-			// get byte start in file for next record
-			currentByteStart = application.getNext(currentByteStart);
-			// assign current Employee to record in file
-			currentEmployee = application.readRecords(currentByteStart);
-			// loop to previous next until Employee is active - ID is not 0
-			while (currentEmployee.getEmployeeId() == 0) {
-				// get byte start in file for next record
-				currentByteStart = application.getNext(currentByteStart);
-				// assign current Employee to next record in file
-				currentEmployee = application.readRecords(currentByteStart);
-			} // end while
-			application.closeReadFile();// close file for reading
-		} // end if
-	}// end nextRecord
+	    if (isSomeoneToDisplay()) {
+	        currentEmployee = readPreviousOrNextRecord(false);
+	    } else {
+	        currentEmployee = new NullEmployee(); // No records exist
+	    }
+	    displayRecords(currentEmployee);
+	}
 
-	// find byte start in file for last active record
 	private void lastRecord() {
-		// if any active record in file look for first record
-		if (isSomeoneToDisplay()) {
-			// open file for reading
-			application.openReadFile(file.getAbsolutePath());
-			// get byte start in file for last record
-			currentByteStart = application.getLast();
-			// assign current Employee to first record in file
-			currentEmployee = application.readRecords(currentByteStart);
-			application.closeReadFile();// close file for reading
-			// if last record is inactive look for previous record
-			if (currentEmployee.getEmployeeId() == 0)
-				previousRecord();// look for previous record
-		} // end if
-	}// end lastRecord
+	    if (isSomeoneToDisplay()) {
+	        currentEmployee = readRecord(application.getLast());
+	    } else {
+	        currentEmployee = new NullEmployee(); // No records exist
+	    }
+	    displayRecords(currentEmployee);
+	}
 
-	// search Employee by ID
+	private Employee readRecord(long byteStart) {
+	    application.openReadFile(file.getAbsolutePath());
+	    try {
+	        currentByteStart = byteStart;
+	        Employee employee = application.readRecords(currentByteStart);
+
+	        // If the employee is invalid, return a NullEmployee
+	        if (employee.getEmployeeId() == 0) {
+	            return new NullEmployee();
+	        }
+
+	        return employee;
+	    } finally {
+	        application.closeReadFile();
+	    }
+	}
+
+	private Employee readPreviousOrNextRecord(boolean isPrevious) {
+	    application.openReadFile(file.getAbsolutePath());
+	    try {
+	        do {
+	            currentByteStart = isPrevious ? application.getPrevious(currentByteStart) : application.getNext(currentByteStart);
+	            currentEmployee = application.readRecords(currentByteStart);
+	        } while (currentEmployee.getEmployeeId() == 0);
+
+	        // If no valid employee is found, return a NullEmployee
+	        if (currentEmployee.getEmployeeId() == 0) {
+	            return new NullEmployee();
+	        }
+
+	        return currentEmployee;
+	    } finally {
+	        application.closeReadFile();
+	    }
+	}
+	
 	public void searchEmployeeById() {
 		boolean found = false;
 
@@ -513,8 +499,9 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		} // end if
 		searchBySurnameField.setText("");
 	}// end searchEmployeeBySurname
-
 	// get next free ID from Employees in the file
+	
+	
 	public int getNextFreeId() {
 		int nextFreeId = 0;
 		// if file is empty or all records are empty start with ID 1 else look
@@ -561,115 +548,131 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 					JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
 			// if answer yes delete (make inactive - empty) record
 			if (returnVal == JOptionPane.YES_OPTION) {
-				// open file for writing
+				
 				application.openWriteFile(file.getAbsolutePath());
-				// delete (make inactive - empty) record in file proper position
+				
+		
 				application.deleteRecords(currentByteStart);
-				application.closeWriteFile();// close file for writing
+				
+				application.closeWriteFile();
 				// if any active record in file display next record
 				if (isSomeoneToDisplay()) {
-					nextRecord();// look for next record
+					nextRecord();
 					displayRecords(currentEmployee);
-				} // end if
-			} // end if
-		} // end if
-	}// end deleteDecord
+				}
+			} 
+		} 
+	}
 
-	// create vector of vectors with all Employee details
+	// Retrieve all employee details as a vector of vectors
 	private Vector<Object> getAllEmloyees() {
-		// vector of Employee objects
-		Vector<Object> allEmployee = new Vector<Object>();
-		Vector<Object> empDetails;// vector of each employee details
-		long byteStart = currentByteStart;
-		int firstId;
+	    Vector<Object> allEmployees = new Vector<>(); // Vector to hold all employee details
+	    Vector<Object> empDetails; // Vector to hold details of a single employee
+	    long byteStart = currentByteStart; // Save the current byte start position
+	    int firstId;
 
-		firstRecord();// look for first record
-		firstId = currentEmployee.getEmployeeId();
-		// loop until all Employees are added to vector
-		do {
-			empDetails = new Vector<Object>();
-			empDetails.addElement(new Integer(currentEmployee.getEmployeeId()));
-			empDetails.addElement(currentEmployee.getPps());
-			empDetails.addElement(currentEmployee.getSurname());
-			empDetails.addElement(currentEmployee.getFirstName());
-			empDetails.addElement(new Character(currentEmployee.getGender()));
-			empDetails.addElement(currentEmployee.getDepartment());
-			empDetails.addElement(new Double(currentEmployee.getSalary()));
-			empDetails.addElement(new Boolean(currentEmployee.getFullTime()));
+	    firstRecord(); // Navigate to the first record
+	    firstId = currentEmployee.getEmployeeId(); // Get the ID of the first employee
 
-			allEmployee.addElement(empDetails);
-			nextRecord();// look for next record
-		} while (firstId != currentEmployee.getEmployeeId());// end do - while
-		currentByteStart = byteStart;
+	    // Loop through all employees and add their details to the vector
+	    do {
+	        empDetails = new Vector<>();
+	        empDetails.addElement(currentEmployee.getEmployeeId()); // Employee ID
+	        empDetails.addElement(currentEmployee.getPps()); // PPS number
+	        empDetails.addElement(currentEmployee.getSurname()); // Surname
+	        empDetails.addElement(currentEmployee.getFirstName()); // First name
+	        empDetails.addElement(currentEmployee.getGender()); // Gender
+	        empDetails.addElement(currentEmployee.getDepartment()); // Department
+	        empDetails.addElement(currentEmployee.getSalary()); // Salary
+	        empDetails.addElement(currentEmployee.getFullTime()); // Full-time status
 
-		return allEmployee;
-	}// end getAllEmployees
+	        allEmployees.addElement(empDetails); // Add employee details to the main vector
+	        nextRecord(); // Navigate to the next record
+	    } while (firstId != currentEmployee.getEmployeeId()); // Stop when we loop back to the first employee
 
-	// activate field for editing
+	    currentByteStart = byteStart; // Restore the original byte start position
+	    return allEmployees; // Return the vector of all employee details
+	}
+
+	// Enable fields for editing employee details
 	private void editDetails() {
-		// activate field for editing if there is records to display
-		if (isSomeoneToDisplay()) {
-			// remove euro sign from salary text field
-			salaryField.setText(fieldFormat.format(currentEmployee.getSalary()));
-			change = false;
-			setEnabled(true);// enable text fields for editing
-		} // end if
-	}// end editDetails
+	    if (isSomeoneToDisplay()) { // Check if there are records to display
+	        salaryField.setText(fieldFormat.format(currentEmployee.getSalary())); // Format and display salary
+	        change = false; // Reset the change flag
+	        setEnabled(true); // Enable text fields for editing
+	    }
+	}
 
-	// ignore changes and set text field unenabled
+	// Cancel changes and disable editing fields
 	private void cancelChange() {
-		setEnabled(false);
-		displayRecords(currentEmployee);
-	}// end cancelChange
+	    setEnabled(false); // Disable text fields
+	    displayRecords(currentEmployee); // Re-display the current employee record
+	}
 
-	// check if any of records in file is active - ID is not 0
+	// Check if there are any active records in the file (ID is not 0)
 	private boolean isSomeoneToDisplay() {
-		boolean someoneToDisplay = false;
-		// open file for reading
-		application.openReadFile(file.getAbsolutePath());
-		// check if any of records in file is active - ID is not 0
-		someoneToDisplay = application.isSomeoneToDisplay();
-		application.closeReadFile();// close file for reading
-		// if no records found clear all text fields and display message
-		if (!someoneToDisplay) {
-			currentEmployee = null;
-			idField.setText("");
-			ppsField.setText("");
-			surnameField.setText("");
-			firstNameField.setText("");
-			salaryField.setText("");
-			genderCombo.setSelectedIndex(0);
-			departmentCombo.setSelectedIndex(0);
-			fullTimeCombo.setSelectedIndex(0);
-			JOptionPane.showMessageDialog(null, "No Employees registered!");
-		}
-		return someoneToDisplay;
-	}// end isSomeoneToDisplay
+	    boolean someoneToDisplay = false;
 
-	// check for correct PPS format and look if PPS already in use
+	    application.openReadFile(file.getAbsolutePath()); // Open the file for reading
+	    someoneToDisplay = application.isSomeoneToDisplay(); // Check for active records
+	    application.closeReadFile(); // Close the file after reading
+
+	    if (!someoneToDisplay) { // If no active records are found
+	        currentEmployee = null; // Clear the current employee
+	        idField.setText(""); // Clear ID field
+	        ppsField.setText(""); // Clear PPS field
+	        surnameField.setText(""); // Clear surname field
+	        firstNameField.setText(""); // Clear first name field
+	        salaryField.setText(""); // Clear salary field
+	        genderCombo.setSelectedIndex(0); // Reset gender combo box
+	        departmentCombo.setSelectedIndex(0); // Reset department combo box
+	        fullTimeCombo.setSelectedIndex(0); // Reset full-time combo box
+	        JOptionPane.showMessageDialog(null, "No Employees registered!"); // Show message
+	    }
+
+	    return someoneToDisplay; // Return whether there are active records
+	}
+
+	// Check for correct PPS format and verify if PPS is already in use
 	public boolean correctPps(String pps, long currentByte) {
-		boolean ppsExist = false;
-		// check for correct PPS format based on assignment description
-		if (pps.length() == 8 || pps.length() == 9) {
-			if (Character.isDigit(pps.charAt(0)) && Character.isDigit(pps.charAt(1))
-					&& Character.isDigit(pps.charAt(2))	&& Character.isDigit(pps.charAt(3)) 
-					&& Character.isDigit(pps.charAt(4))	&& Character.isDigit(pps.charAt(5)) 
-					&& Character.isDigit(pps.charAt(6))	&& Character.isLetter(pps.charAt(7))
-					&& (pps.length() == 8 || Character.isLetter(pps.charAt(8)))) {
-				// open file for reading
-				application.openReadFile(file.getAbsolutePath());
-				// look in file is PPS already in use
-				ppsExist = application.isPpsExist(pps, currentByte);
-				application.closeReadFile();// close file for reading
-			} // end if
-			else
-				ppsExist = true;
-		} // end if
-		else
-			ppsExist = true;
+	    if (!isValidPpsFormat(pps)) {
+	        return true; // PPS format is invalid
+	    }
 
-		return ppsExist;
-	}// end correctPPS
+	    return isPpsAlreadyInUse(pps, currentByte); // Check if PPS exists in the file
+	}
+
+	// Validate PPS format 
+	private boolean isValidPpsFormat(String pps) {
+	    if (pps.length() != 8 && pps.length() != 9) {
+	        return false; // PPS length must be 8 or 9
+	    }
+
+	    // Check that the first 7 characters are digits and the last 1 or 2 are letters
+	    for (int i = 0; i < 7; i++) {
+	        if (!Character.isDigit(pps.charAt(i))) {
+	            return false;
+	        }
+	    }
+
+	    if (!Character.isLetter(pps.charAt(7))) {
+	        return false;
+	    }
+
+	    if (pps.length() == 9 && !Character.isLetter(pps.charAt(8))) {
+	        return false;
+	    }
+
+	    return true; // PPS format is valid
+	}
+
+	// Check if PPS is already in use in the file
+	private boolean isPpsAlreadyInUse(String pps, long currentByte) {
+	    application.openReadFile(file.getAbsolutePath()); // Open file for reading
+	    boolean ppsExists = application.isPpsExist(pps, currentByte); // Check if PPS exists
+	    application.closeReadFile(); // Close file after reading
+	    return ppsExists;
+	}
 
 	// check if file name has extension .dat
 	private boolean checkFileName(File fileName) {
@@ -703,59 +706,79 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 
 	// check for input in text fields
 	private boolean checkInput() {
-		boolean valid = true;
-		// if any of inputs are in wrong format, colour text field and display
-		// message
-		if (ppsField.isEditable() && ppsField.getText().trim().isEmpty()) {
-			ppsField.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-		if (ppsField.isEditable() && correctPps(ppsField.getText().trim(), currentByteStart)) {
-			ppsField.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-		if (surnameField.isEditable() && surnameField.getText().trim().isEmpty()) {
-			surnameField.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-		if (firstNameField.isEditable() && firstNameField.getText().trim().isEmpty()) {
-			firstNameField.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-		if (genderCombo.getSelectedIndex() == 0 && genderCombo.isEnabled()) {
-			genderCombo.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-		if (departmentCombo.getSelectedIndex() == 0 && departmentCombo.isEnabled()) {
-			departmentCombo.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-		try {// try to get values from text field
-			Double.parseDouble(salaryField.getText());
-			// check if salary is greater than 0
-			if (Double.parseDouble(salaryField.getText()) < 0) {
-				salaryField.setBackground(new Color(255, 150, 150));
-				valid = false;
-			} // end if
-		} // end try
-		catch (NumberFormatException num) {
-			if (salaryField.isEditable()) {
-				salaryField.setBackground(new Color(255, 150, 150));
-				valid = false;
-			} // end if
-		} // end catch
-		if (fullTimeCombo.getSelectedIndex() == 0 && fullTimeCombo.isEnabled()) {
-			fullTimeCombo.setBackground(new Color(255, 150, 150));
-			valid = false;
-		} // end if
-			// display message if any input or format is wrong
-		if (!valid)
-			JOptionPane.showMessageDialog(null, "Wrong values or format! Please check!");
-		// set text field to white colour if text fields are editable
-		if (ppsField.isEditable())
-			setToWhite();
+	    boolean valid = true;
 
-		return valid;
+	    // Validate PPS field
+	    valid &= validateTextField(ppsField, "PPS cannot be empty");
+	    valid &= validatePpsField(ppsField, currentByteStart);
+
+	    // Validate surname and first name fields
+	    valid &= validateTextField(surnameField, "Surname cannot be empty");
+	    valid &= validateTextField(firstNameField, "First name cannot be empty");
+
+	    // Validate combo boxes
+	    valid &= validateComboBox(genderCombo, "Gender must be selected");
+	    valid &= validateComboBox(departmentCombo, "Department must be selected");
+	    valid &= validateComboBox(fullTimeCombo, "Full-time status must be selected");
+
+	    // Validate salary field
+	    valid &= validateSalaryField(salaryField);
+
+	    // Display error message if any validation fails
+	    if (!valid) {
+	        JOptionPane.showMessageDialog(null, "Wrong values or format! Please check!");
+	    }
+
+	    // Reset fields to white if editable
+	    if (ppsField.isEditable()) {
+	        setToWhite();
+	    }
+
+	    return valid;
+	}
+
+	// Validate a text field for empty input
+	private boolean validateTextField(JTextField field, String errorMessage) {
+	    if (field.isEditable() && field.getText().trim().isEmpty()) {
+	        field.setBackground(new Color(255, 150, 150));
+	        return false;
+	    }
+	    return true;
+	}
+
+	// Validate the PPS field
+	private boolean validatePpsField(JTextField ppsField, long currentByteStart) {
+	    if (ppsField.isEditable() && correctPps(ppsField.getText().trim(), currentByteStart)) {
+	        ppsField.setBackground(new Color(255, 150, 150));
+	        return false;
+	    }
+	    return true;
+	}
+
+	// Validate a combo box for selection
+	private boolean validateComboBox(JComboBox<?> comboBox, String errorMessage) {
+	    if (comboBox.isEnabled() && comboBox.getSelectedIndex() == 0) {
+	        comboBox.setBackground(new Color(255, 150, 150));
+	        return false;
+	    }
+	    return true;
+	}
+
+	// Validate the salary field
+	private boolean validateSalaryField(JTextField salaryField) {
+	    if (salaryField.isEditable()) {
+	        try {
+	            double salary = Double.parseDouble(salaryField.getText());
+	            if (salary < 0) {
+	                salaryField.setBackground(new Color(255, 150, 150));
+	                return false;
+	            }
+	        } catch (NumberFormatException e) {
+	            salaryField.setBackground(new Color(255, 150, 150));
+	            return false;
+	        }
+	    }
+	    return true;
 	}
 
 	// set text field background colour to white
